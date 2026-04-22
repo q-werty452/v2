@@ -512,6 +512,7 @@ function applyLang(lang) {
     renderSidebar();
     renderChefPicks();
     renderMenuSections();
+    renderCart();
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -580,9 +581,9 @@ function renderChefPicks() {
                         ${fmtPrice(dish.price)}<span class="chef-card__price-unit"> ${t.currency}</span>
                     </span>
                     <div class="chef-card__actions">
-                        <button class="dish-card__add-btn" data-dish-id="${dish.id}" aria-label="${t.addToCart}">
-                            <i class="bi bi-bag-plus"></i>
-                        </button>
+                        <div class="dish-card__ctrl" data-dish-id="${dish.id}">
+                            ${cardCtrlHtml(dish.id, t)}
+                        </div>
                         <span class="chef-card__more">${t.moreBtn}</span>
                     </div>
                 </div>
@@ -591,19 +592,14 @@ function renderChefPicks() {
     `).join('');
 
     chefsGrid.querySelectorAll('.chef-card').forEach(card => {
-        card.addEventListener('click', () => {
+        card.addEventListener('click', e => {
+            if (e.target.closest('.dish-card__ctrl')) return;
             const pick = picks.find(p => p.dish.id === card.dataset.dishId);
             if (pick) openModal(pick.dish, pick.catName);
         });
     });
 
-    chefsGrid.querySelectorAll('.dish-card__add-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-            e.stopPropagation();
-            const found = findDish(btn.dataset.dishId);
-            if (found) addToCart(found.dish);
-        });
-    });
+    chefsGrid.querySelectorAll('.dish-card__ctrl').forEach(ctrl => bindCtrlEvents(ctrl));
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -658,7 +654,8 @@ function renderMenuSections() {
 
     /* Клики по карточкам блюд */
     menuSections.querySelectorAll('.dish-card').forEach(card => {
-        card.addEventListener('click', () => {
+        card.addEventListener('click', e => {
+            if (e.target.closest('.dish-card__ctrl')) return;
             const catId  = card.closest('.cat-section').dataset.cat;
             const dishId = card.dataset.dishId;
             const cat    = CATEGORIES.find(c => c.id === catId);
@@ -667,13 +664,7 @@ function renderMenuSections() {
         });
     });
 
-    menuSections.querySelectorAll('.dish-card__add-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-            e.stopPropagation();
-            const found = findDish(btn.dataset.dishId);
-            if (found) addToCart(found.dish);
-        });
-    });
+    menuSections.querySelectorAll('.dish-card__ctrl').forEach(ctrl => bindCtrlEvents(ctrl));
 
     /* Запускаем IntersectionObserver */
     initObserver();
@@ -701,9 +692,9 @@ function renderDishCard(dish, lang, t, index) {
                 <span class="${priceClass}">
                     ${fmtPrice(dish.price)}<span class="dish-card__unit"> ${t.currency}</span>
                 </span>
-                <button class="dish-card__add-btn" data-dish-id="${dish.id}" aria-label="${t.addToCart}">
-                    <i class="bi bi-bag-plus"></i>
-                </button>
+                <div class="dish-card__ctrl" data-dish-id="${dish.id}">
+                    ${cardCtrlHtml(dish.id, t)}
+                </div>
             </div>
         </div>
     </div>`;
@@ -742,6 +733,7 @@ function addToCart(dish) {
     }
     updateCartBadge();
     renderCart();
+    updateAllCardControls(dish.id);
     showToast(`«${dish.name[state.lang]}» ${I18N[state.lang].cartAdded}`);
 }
 
@@ -752,12 +744,15 @@ function updateCartQty(dishId, delta) {
     if (item.qty <= 0) state.cart = state.cart.filter(i => i.dishId !== dishId);
     updateCartBadge();
     renderCart();
+    updateAllCardControls(dishId);
 }
 
 function clearCart() {
+    const ids = state.cart.map(i => i.dishId);
     state.cart = [];
     updateCartBadge();
     renderCart();
+    ids.forEach(id => updateAllCardControls(id));
 }
 
 function calcCartTotal() {
@@ -822,6 +817,77 @@ function renderCart() {
     });
 }
 
+/* HTML контрола на карточке (кнопка или счётчик) */
+function cardCtrlHtml(dishId, t) {
+    const item = state.cart.find(i => i.dishId === dishId);
+    if (item && item.qty > 0) {
+        return `<div class="card-qty-ctrl">
+            <button class="card-qty-btn" data-action="dec" data-id="${dishId}">−</button>
+            <span class="card-qty-num">${item.qty}</span>
+            <button class="card-qty-btn" data-action="inc" data-id="${dishId}">+</button>
+        </div>`;
+    }
+    return `<button class="dish-card__add-btn" data-dish-id="${dishId}" aria-label="${t.addToCart}">
+        <i class="bi bi-bag-plus"></i>
+    </button>`;
+}
+
+/* Привязка событий к контролу карточки */
+function bindCtrlEvents(ctrl) {
+    const addBtn = ctrl.querySelector('.dish-card__add-btn');
+    if (addBtn) {
+        addBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            const found = findDish(addBtn.dataset.dishId);
+            if (found) addToCart(found.dish);
+        });
+    }
+    ctrl.querySelectorAll('.card-qty-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            updateCartQty(btn.dataset.id, btn.dataset.action === 'inc' ? 1 : -1);
+        });
+    });
+}
+
+/* Обновить контролы на всех карточках + модал для конкретного блюда */
+function updateAllCardControls(dishId) {
+    const t = I18N[state.lang];
+    document.querySelectorAll(`.dish-card__ctrl[data-dish-id="${dishId}"]`).forEach(ctrl => {
+        ctrl.innerHTML = cardCtrlHtml(dishId, t);
+        bindCtrlEvents(ctrl);
+    });
+    if (state.modalDish?.id === dishId) renderModalControl();
+}
+
+/* Контрол в модале (кнопка или счётчик) */
+function renderModalControl() {
+    const dish = state.modalDish;
+    if (!dish) return;
+    const t = I18N[state.lang];
+    const item = state.cart.find(i => i.dishId === dish.id);
+    const row = document.getElementById('modal-cart-row');
+    if (!row) return;
+
+    if (item && item.qty > 0) {
+        row.innerHTML = `
+            <div class="modal-qty-ctrl">
+                <button class="modal-qty-btn" data-action="dec" data-id="${dish.id}">−</button>
+                <span class="modal-qty-num">${item.qty}</span>
+                <button class="modal-qty-btn" data-action="inc" data-id="${dish.id}">+</button>
+            </div>`;
+        row.querySelector('[data-action="dec"]').addEventListener('click', () => updateCartQty(dish.id, -1));
+        row.querySelector('[data-action="inc"]').addEventListener('click', () => updateCartQty(dish.id, 1));
+    } else {
+        row.innerHTML = `
+            <button class="modal-add-btn">
+                <i class="bi bi-bag-plus"></i>
+                <span>${t.addToCart}</span>
+            </button>`;
+        row.querySelector('.modal-add-btn').addEventListener('click', () => addToCart(dish));
+    }
+}
+
 function openCart() {
     cartDrawer.classList.add('open');
     cartOverlay.classList.add('active');
@@ -872,6 +938,7 @@ function handleSearch(query) {
    10. МОДАЛ
 ───────────────────────────────────────────────────────── */
 function openModal(dish, catName) {
+    state.modalDish = dish;
     const lang = state.lang;
     const t    = I18N[lang];
 
@@ -899,6 +966,8 @@ function openModal(dish, catName) {
     } else {
         modalIngrBlock.style.display = 'none';
     }
+
+    renderModalControl();
 
     modalOverlay.classList.add('open');
     document.body.classList.add('modal-open');
@@ -1028,11 +1097,31 @@ document.getElementById('btn-waiter').addEventListener('click', () => {
     showToast(I18N[state.lang].waiterToast);
 });
 
+/* Корзина — открытие */
+document.getElementById('btn-cart').addEventListener('click', openCart);
+
+/* Корзина — закрытие */
+document.getElementById('cart-close').addEventListener('click', closeCart);
+cartOverlay.addEventListener('click', closeCart);
+
+/* Корзина — оформить заказ */
+document.getElementById('cart-order-btn').addEventListener('click', () => {
+    if (state.cart.length === 0) return;
+    showToast(I18N[state.lang].orderToast);
+    closeCart();
+});
+
+/* Корзина — очистить */
+document.getElementById('cart-clear-btn').addEventListener('click', clearCart);
+
 /* Модал — закрытие */
 document.getElementById('modal-close').addEventListener('click', closeModal);
 modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && modalOverlay.classList.contains('open')) closeModal();
+    if (e.key === 'Escape') {
+        if (modalOverlay.classList.contains('open')) closeModal();
+        else if (cartDrawer.classList.contains('open')) closeCart();
+    }
 });
 
 /* ─────────────────────────────────────────────────────────

@@ -1296,7 +1296,7 @@ body.modal-open { overflow: hidden; }
         transform: translateX(0);
     }
 
-    .sidebar-overlay { display: block; }
+    .sidebar-overlay { display: block; pointer-events: none; }
     .sidebar-overlay.active { opacity: 1; pointer-events: all; }
 
     .content { /* full width */ }
@@ -1668,6 +1668,91 @@ body.modal-open { overflow: hidden; }
 
 .btn-cart-clear:hover { color: #E07070; }
 
+/* ── Обёртка контрола на карточке ── */
+.dish-card__ctrl {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* ── Счётчик количества на карточке ── */
+.card-qty-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.card-qty-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    border: 1px solid var(--gold-border);
+    color: var(--gold);
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.12s var(--ease);
+}
+
+.card-qty-btn:hover { background: rgba(197,160,89,0.30); }
+.card-qty-btn:active { transform: scale(0.86); }
+
+.card-qty-num {
+    min-width: 18px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1;
+}
+
+/* ── Счётчик количества в модале ── */
+.modal-qty-ctrl {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    padding: 10px 0;
+}
+
+.modal-qty-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    border: 1px solid var(--gold-border);
+    color: var(--gold);
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: background 0.15s, transform 0.12s var(--ease), box-shadow 0.15s;
+}
+
+.modal-qty-btn:hover {
+    background: rgba(197,160,89,0.28);
+    box-shadow: 0 4px 14px rgba(197,160,89,0.25);
+}
+
+.modal-qty-btn:active { transform: scale(0.88); }
+
+.modal-qty-num {
+    font-family: var(--serif);
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--gold);
+    min-width: 44px;
+    text-align: center;
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(197,160,89,0.35);
+}
+
 /* ── Кнопка «В корзину» на карточке блюда ── */
 .dish-card__add-btn {
     width: 30px;
@@ -1736,5 +1821,119 @@ body.modal-open { overflow: hidden; }
 /* Very small (< 380px) */
 @media (max-width: 379px) {
     .dishes-grid { grid-template-columns: 1fr; }
-    .chefs-grid { grid-template-columns: repeat(3, 240px); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — дополнения для полной адаптивности
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Между планшетом и телефоном (768–1023px) ── */
+@media (max-width: 1023px) and (min-width: 640px) {
+    .chefs-grid {
+        grid-template-columns: repeat(3, minmax(200px, 1fr));
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+    }
+    .chef-card { min-width: 200px; }
+}
+
+/* ── Мобильные — дополнения к существующему <640px ── */
+@media (max-width: 639px) {
+    /* Шапка: меньше отступы */
+    .app-header { padding: 0 14px; gap: 10px; }
+    .header-right { gap: 8px; }
+
+    /* Корзина: полный экран */
+    .cart-drawer { width: 100vw; border-left: none; }
+
+    /* Сплеш: кнопка на всю ширину */
+    .btn-enter { width: 100%; max-width: 340px; justify-content: center; }
+    .splash-inner { gap: 18px; }
+
+    /* Секции: меньше отступы */
+    .cat-section { margin-bottom: 32px; }
+    .content-divider { margin: 20px 0 16px; }
+    .section-heading { margin-bottom: 16px; }
+
+    /* Кнопка «в корзину» и счётчик на карточке */
+    .dish-card__add-btn { width: 26px; height: 26px; font-size: 13px; }
+    .card-qty-btn { width: 24px; height: 24px; font-size: 14px; }
+    .card-qty-num { font-size: 12px; min-width: 14px; }
+
+    /* Заголовок раздела */
+    .cat-section__icon { width: 34px; height: 34px; font-size: 16px; }
+    .cat-section__header { gap: 10px; }
+
+    /* Chef cards: чуть шире */
+    .chefs-grid { grid-template-columns: repeat(3, 290px); }
+}
+
+/* ── Маленькие телефоны (<480px) ── */
+@media (max-width: 479px) {
+    :root { --pad: 12px; --gap: 10px; }
+
+    /* Шапка */
+    .app-header { padding: 0 12px; gap: 8px; }
+    .header-right { gap: 6px; }
+    .header-logo { font-size: 17px; letter-spacing: 0.18em; flex-shrink: 1; min-width: 0; }
+
+    /* Поиск: уже при раскрытии */
+    .search-input.expanded,
+    .search-wrap:focus-within .search-input { width: 90px; }
+
+    /* Chef cards: wider scroll cards, smaller image, hide desc */
+    .chefs-grid { grid-template-columns: repeat(3, 230px); }
+    .chef-card__img-wrap { height: 165px; }
+    .chef-card__desc { display: none; }
+
+    /* Карточки блюд */
+    .dish-card__img-wrap { height: 120px; }
+    .dish-card__name { font-size: 12px; }
+    .dish-card__add-btn { width: 24px; height: 24px; font-size: 12px; }
+
+    /* VIP */
+    .vip-card { padding: 16px 14px; }
+    .vip-card::before { font-size: 20px; }
+
+    /* Сплеш */
+    .rules-block { padding: 18px 16px; }
+    .rules-text { font-size: 12px; }
+
+    /* Корзина drawer */
+    .cart-drawer__head { padding: 16px 16px 12px; }
+    .cart-drawer__body { padding: 6px 12px; }
+    .cart-drawer__footer { padding: 12px 16px 18px; }
+    .cart-item__img { width: 46px; height: 46px; }
+
+    /* Модал */
+    .modal-hero { height: 200px; }
+    .modal-body { padding: 14px 16px 20px; }
+    #modal-price { font-size: 26px; }
+    .modal-name { font-size: 20px; }
+}
+
+/* ── Очень маленькие (<380px) — дополнения ── */
+@media (max-width: 379px) {
+    .app-header { padding: 0 10px; }
+    .header-logo { font-size: 15px; letter-spacing: 0.14em; }
+
+    /* Поиск: совсем узкий */
+    .search-input.expanded,
+    .search-wrap:focus-within .search-input { width: 60px; }
+
+    /* Скрыть кнопку вызова официанта — слишком тесно */
+    .btn-waiter { display: none; }
+
+    /* Шеф-карты */
+    .chefs-grid { grid-template-columns: repeat(3, 200px); }
+    .chef-card__img-wrap { height: 145px; }
+
+    /* Сплеш */
+    .splash-inner { gap: 14px; }
+    .splash-logo { font-size: clamp(48px, 14vw, 68px); }
+
+    /* Корзина */
+    .cart-total-price { font-size: 20px; }
+    .cart-item { gap: 8px; }
+    .cart-item__img { width: 40px; height: 40px; border-radius: 8px; }
 }
